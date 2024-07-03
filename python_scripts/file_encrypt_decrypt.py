@@ -6,6 +6,11 @@ logging.basicConfig(level=logging.INFO)
 gpg=gnupg.GPG(gpgbinary='C:\Program Files (x86)\GNU\GnuPG\gpg.exe') #initializing gnuPG object
 logging.info("GNU PG object initialized successfully")
 
+recipient_email="sushank.saini@abc.com"
+passphrase="passphrase"
+public_key=""
+private_key=""
+
 def main_function(file):
     if file is None or file=="": #check if file name is null or empty
         logging.error("File name is empty. Please provide a valid file name.")
@@ -25,8 +30,6 @@ def generate_keypair():
     logging.info("Generating key pair.")
     try:
         logging.info("Initializing Input Data for Key Generation.")
-        recipient_email="sushank.saini@abc.com"
-        passphrase="passphrase"
         input_data=gpg.gen_key_input(name_email=recipient_email,passphrase=passphrase)
         key=gpg.gen_key(input_data)
         logging.info("Key Pair Generated sucessfully.")
@@ -34,18 +37,20 @@ def generate_keypair():
         logging.info("Public Key Generated Successfully")
         private_key=gpg.export_keys(key.fingerprint, True)
         logging.info("Private Key Generated Successfully")
-        logging.info("Exporting Public Key into a file")
-        with open("public_key.txt", "w") as file1:
-            file1.write(public_key)
-            file1.close()
-        logging.info("Exporting Private Key into a file")
-        with open("private_key.txt","w") as file2:
-            file2.write(private_key)
-            file2.close()
+        #with open("public_key.txt", "w") as file1:
+            #file1.write(public_key)
+            #file1.close()
+        #logging.info("Exporting Private Key into a file")
+        #with open("private_key.txt","w") as file2:
+            #file2.write(private_key)
+            #file2.close()
         return True
     except Exception as error:
         logging.info(error)
         return False
+
+#def encrypt_file(file):
+    
 
 if __name__=="__main__":
     main_function("test.txt")
