@@ -1,6 +1,7 @@
 # PGP encryption and decryption using gnuPG v1.4
 import logging
 import gnupg
+import os 
 
 logging.basicConfig(level=logging.INFO)
 gpg=gnupg.GPG(gpgbinary='C:\Program Files (x86)\GNU\GnuPG\gpg.exe') #initializing gnuPG object
@@ -8,17 +9,21 @@ logging.info("GNU PG object initialized successfully")
 
 recipient_email="sushank.saini@abc.com"
 passphrase="passphrase"
-public_key=""
-private_key=""
+encrypted_file_path="E:\BMO-SE-Work\python_scripts\encrypted_file.gpg"
 
-def main_function(file):
-    if file is None or file=="": #check if file name is null or empty
-        logging.error("File name is empty. Please provide a valid file name.")
-    logging.info("File Name OK")
+def main_function(file_path):
+    if file_path is None or file_path=="": #check if file path is null or empty
+        logging.error("File Path Is Empty. Please Provide a Valid File Path.")
+    logging.info("File Path OK")
     key_generation_status=generate_keypair()
     if(key_generation_status is True):
-        logging.info("Encrypting the file.")
-        #encryption_status=encrypt_file(file)
+        logging.info("Encrypting the File.")
+        encryption_status=encrypt_file(file_path)
+        if encryption_status is True:
+            logging.info("File Encrypted Sucessfully.")
+            logging.info("Uploading the File to FTP Server.")
+        else:
+            logging.info("File could not be encrypted.")
     else:
         logging.info("There was an error generating the key pair for PGP encryption and decryption.")
     #upload_file_to_sftp(file_name)
@@ -31,26 +36,37 @@ def generate_keypair():
     try:
         logging.info("Initializing Input Data for Key Generation.")
         input_data=gpg.gen_key_input(name_email=recipient_email,passphrase=passphrase)
-        key=gpg.gen_key(input_data)
+        gpg.gen_key(input_data)
         logging.info("Key Pair Generated sucessfully.")
-        public_key=gpg.export_keys(key.fingerprint)
-        logging.info("Public Key Generated Successfully")
-        private_key=gpg.export_keys(key.fingerprint, True)
-        logging.info("Private Key Generated Successfully")
-        #with open("public_key.txt", "w") as file1:
-            #file1.write(public_key)
-            #file1.close()
-        #logging.info("Exporting Private Key into a file")
-        #with open("private_key.txt","w") as file2:
-            #file2.write(private_key)
-            #file2.close()
+        #public_key=gpg.export_keys(key.fingerprint)
+        #logging.info("Public Key Generated Successfully")
+        #private_key=gpg.export_keys(key.fingerprint, True)
+        #logging.info("Private Key Generated Successfully")
         return True
     except Exception as error:
         logging.info(error)
         return False
 
-#def encrypt_file(file):
+def encrypt_file(file):
+    logging.info("Encrypting file: " +file)
+    logging.info("Absolute Path of the file: "+ os.path.abspath(file))
+    try:
+        logging.info("Reading original file.")
+        with open(file, "rb") as f:
+            status=gpg.encrypt_file(f,recipients=recipient_email,output=encrypted_file_path)
+        if status.ok is True:
+            return True
+        else:
+            return False
+    except FileNotFoundError as error:
+        logging.error(error)
+        return False
+    except Exception as error:
+        logging.error(error)
+        return False
+        
+        
     
 
 if __name__=="__main__":
-    main_function("test.txt")
+    main_function("E:\BMO-SE-Work\python_scripts\original_file.txt")
