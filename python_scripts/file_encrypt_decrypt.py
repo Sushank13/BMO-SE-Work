@@ -2,8 +2,10 @@
 import logging
 import gnupg
 import os 
+import mysql.connector
 
 logging.basicConfig(level=logging.INFO)
+
 gpg=gnupg.GPG(gpgbinary='C:\Program Files (x86)\GNU\GnuPG\gpg.exe') #initializing gnuPG object
 logging.info("GNU PG object initialized successfully")
 
@@ -26,13 +28,18 @@ def main_function(file_path):
             decryption_status=decrypt_file(encrypted_file_path)
             if decryption_status is True:
                 logging.info("File Decrypted Successfully")
+                logging.info("Uploading Decrypted File to the Database.")
+                upload_to_db_status=upload_file_to_db()
+                if upload_to_db_status is True:
+                    logging.info("File Successfully Uploaded to Database.")
+                else:
+                    logging.error("File Could Not be Uploaded to Database.")
             else:
-                logging.info("File could not be Decrypted.")
+                logging.error("File could not be Decrypted.")
         else:
-            logging.info("File could not be Encrypted.")
+            logging.error("File could not be Encrypted.")
     else:
-        logging.info("There was an error generating the key pair for PGP encryption and decryption.")
-    #upload_file_to_db()
+        logging.error("There was an error generating the key pair for PGP encryption and decryption.")
     
 def generate_keypair():
     logging.info("Generating key pair.")
@@ -81,6 +88,30 @@ def decrypt_file(file):
     except Exception as error:
         logging.error(error)
         return False
+    
+def upload_file_to_db():
+   try:
+       with open(decrypted_file_path,"r") as file:
+           content=file.read()
+       file_name=os.path.basename(decrypted_file_path)
+       connection=create_db_connection()
+       with connection.cursor() as cursor:
+           cursor.callproc("insertDecryptedFileContent",(file_name, content))
+           connection.commit()
+           return True
+   except FileNotFoundError as error:
+        logging.error(error)
+        return False
+   except mysql.connector.Error as error:
+       logging.error(error)
+       return False
+   finally:
+       connection.close()
+
+def create_db_connection():
+    connection=mysql.connector.connect(host="localhost", user="root",password="password",database="decrypted_files")
+    return connection
+    
         
 if __name__=="__main__":
     main_function("E:\BMO-SE-Work\python_scripts\original_file.txt")
