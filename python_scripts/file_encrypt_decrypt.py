@@ -1,18 +1,26 @@
 # PGP encryption and decryption using gnuPG v1.4
 import logging
-import gnupg
 import os 
+from pathlib import Path
+from dotenv import load_dotenv
+import gnupg
 import mysql.connector
 
 logging.basicConfig(level=logging.INFO)
 
-gpg=gnupg.GPG(gpgbinary='C:\Program Files (x86)\GNU\GnuPG\gpg.exe') #initializing gnuPG object
-logging.info("GNU PG object initialized successfully")
+logging.info("Loading .env File")
+dotenv_path=Path("E:\BMO-SE-Work\python_scripts\envvars.env")
+logging.info("dotenv File Loading Status: ")
+logging.info(load_dotenv(dotenv_path=dotenv_path))
 
-recipient_email="sushank.saini@abc.com"
-passphrase="passphrase"
-encrypted_file_path="E:\BMO-SE-Work\python_scripts\encrypted_file.gpg"
-decrypted_file_path="E:\BMO-SE-Work\python_scripts\decrypted_file.txt"
+GPG_BINARY_PATH=os.getenv("GPG_BINARY_PATH")
+RECIPIENT_EMAIL=os.getenv("RECIPIENT_EMAIL")
+PASSPHRASE=os.getenv("PASSPHRASE")
+ENCRYPTED_FILE_PATH=os.getenv("ENCRYPTED_FILE_PATH")
+DECRYPTED_FILE_PATH=os.getenv("DECRYPTED_FILE_PATH")
+
+gpg=gnupg.GPG(gpgbinary=GPG_BINARY_PATH) #initializing gnuPG object
+logging.info("GNU PG object initialized successfully")
 
 def main_function(file_path):
     if file_path is None or file_path=="": #check if file path is null or empty
@@ -25,7 +33,7 @@ def main_function(file_path):
         if encryption_status is True:
             logging.info("File Encrypted Sucessfully.")
             logging.info("Decrypting the File.")
-            decryption_status=decrypt_file(encrypted_file_path)
+            decryption_status=decrypt_file(ENCRYPTED_FILE_PATH)
             if decryption_status is True:
                 logging.info("File Decrypted Successfully")
                 logging.info("Uploading Decrypted File to the Database.")
@@ -45,7 +53,7 @@ def generate_keypair():
     logging.info("Generating key pair.")
     try:
         logging.info("Initializing Input Data for Key Generation.")
-        input_data=gpg.gen_key_input(name_email=recipient_email,passphrase=passphrase)
+        input_data=gpg.gen_key_input(name_email=RECIPIENT_EMAIL,passphrase=PASSPHRASE)
         gpg.gen_key(input_data)
         logging.info("Key Pair Generated sucessfully.")
         return True
@@ -59,7 +67,7 @@ def encrypt_file(file):
     try:
         logging.info("Reading original file.")
         with open(file, "rb") as f:
-            status=gpg.encrypt_file(f,recipients=recipient_email,output=encrypted_file_path)
+            status=gpg.encrypt_file(f,recipients=RECIPIENT_EMAIL,output=ENCRYPTED_FILE_PATH)
         if status.ok is True:
             return True
         else:
@@ -77,7 +85,7 @@ def decrypt_file(file):
     try:
         logging.info("Reading encrypted file.")
         with open(file,"rb") as f:
-            status=gpg.decrypt_file(f,passphrase=passphrase,output=decrypted_file_path)
+            status=gpg.decrypt_file(f,passphrase=PASSPHRASE,output=DECRYPTED_FILE_PATH, always_trust=True)
         if status.ok is True:
             return True
         else:
@@ -91,9 +99,9 @@ def decrypt_file(file):
     
 def upload_file_to_db():
    try:
-       with open(decrypted_file_path,"r") as file:
+       with open(DECRYPTED_FILE_PATH,"r") as file:
            content=file.read()
-       file_name=os.path.basename(decrypted_file_path)
+       file_name=os.path.basename(DECRYPTED_FILE_PATH)
        connection=create_db_connection()
        with connection.cursor() as cursor:
            cursor.callproc("insertDecryptedFileContent",(file_name, content))
