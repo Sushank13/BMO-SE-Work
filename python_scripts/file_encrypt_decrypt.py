@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import gnupg
+import ftplib
 import mysql.connector
 
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +19,11 @@ RECIPIENT_EMAIL=os.getenv("RECIPIENT_EMAIL")
 PASSPHRASE=os.getenv("PASSPHRASE")
 ENCRYPTED_FILE_PATH=os.getenv("ENCRYPTED_FILE_PATH")
 DECRYPTED_FILE_PATH=os.getenv("DECRYPTED_FILE_PATH")
+FTP_HOSTNAME=os.getenv("FTP_HOSTNAME")
+FTP_USERNAME=os.getenv("FTP_USERNAME")
+FTP_PASSWORD=os.getenv("FTP_PASSWORD")
+
+
 
 gpg=gnupg.GPG(gpgbinary=GPG_BINARY_PATH) #initializing gnuPG object
 logging.info("GNU PG object initialized successfully")
@@ -32,18 +38,30 @@ def main_function(file_path):
         encryption_status=encrypt_file(file_path)
         if encryption_status is True:
             logging.info("File Encrypted Sucessfully.")
-            logging.info("Decrypting the File.")
-            decryption_status=decrypt_file(ENCRYPTED_FILE_PATH)
-            if decryption_status is True:
-                logging.info("File Decrypted Successfully")
-                logging.info("Uploading Decrypted File to the Database.")
-                upload_to_db_status=upload_file_to_db()
-                if upload_to_db_status is True:
-                    logging.info("File Successfully Uploaded to Database.")
+            logging.info("Uploading Encrypted file to FTP Server")
+            ftp_file_upload_status=upload_to_ftp_server(ENCRYPTED_FILE_PATH)
+            if(ftp_file_upload_status is True):
+                logging.info("Encrypted File Uploaded to FTP Server Sucessfully")
+                logging.info("Downloading the Encrypted File from FTP Server")
+                ftp_file_download_status=download_from_ftp_server(ENCRYPTED_FILE_PATH)
+                if (ftp_file_download_status is True):
+                    logging.info("Encrypted File Downloaded from FTP Server Sucessfully")
                 else:
-                    logging.error("File Could Not be Uploaded to Database.")
+                    logging.error("Encrypted File Could Not be Downloaded from FTP Server")                    
             else:
-                logging.error("File could not be Decrypted.")
+                logging.error("Encrypted File Could Not be Uploaded to FTP Server")
+            #logging.info("Decrypting the File.")
+            #decryption_status=decrypt_file(ENCRYPTED_FILE_PATH)
+            #if decryption_status is True:
+                #logging.info("File Decrypted Successfully")
+                #logging.info("Uploading Decrypted File to the Database.")
+                #upload_to_db_status=upload_file_to_db()
+                #if upload_to_db_status is True:
+                    #logging.info("File Successfully Uploaded to Database.")
+                #else:
+                    #logging.error("File Could Not be Uploaded to Database.")
+            #else:
+                #logging.error("File could not be Decrypted.")
         else:
             logging.error("File could not be Encrypted.")
     else:
@@ -58,7 +76,7 @@ def generate_keypair():
         logging.info("Key Pair Generated sucessfully.")
         return True
     except Exception as error:
-        logging.info(error)
+        logging.error(error)
         return False
 
 def encrypt_file(file):
@@ -78,6 +96,54 @@ def encrypt_file(file):
     except Exception as error:
         logging.error(error)
         return False
+    
+def upload_to_ftp_server(file):
+    try:
+        logging.info("Connecting to the FTP Server")
+        ftp_server_connection=create_ftp_connection()
+        logging.info("Successfully Connected to the FTP Server")
+        logging.info("Accessing Encrypted File")
+        with open(file,"rb") as f:
+            file_name=os.path.basename(file)
+            ftp_server_connection.storbinary(f"STOR {file_name}", f)
+            logging.info("List of files on FTP Server: ")
+            ftp_server_connection.dir()
+        return True    
+    except FileNotFoundError as error:
+        logging.error(error)
+        return False            
+    except Exception as error:
+        logging.error(error)
+        return False
+    finally:
+        ftp_server_connection.quit()
+
+
+def download_from_ftp_server(file):
+    try:
+        logging.info("Connecting to the FTP Server")
+        ftp_server_connection=create_ftp_connection()
+        logging.info("Successfully Connected to the FTP Server")
+        logging.info("Downloading Encrypted File")
+        with open(file,"wb") as f:
+            file_name=os.path.basename(file)
+            ftp_server_connection.retrbinary(f"RETR {file_name}", f.write)
+        return True    
+    except FileNotFoundError as error:
+        logging.error(error)
+        return False            
+    except Exception as error:
+        logging.error(error)
+        return False
+    finally:
+        ftp_server_connection.quit()
+    
+def create_ftp_connection():
+    ftp_connection=ftplib.FTP(FTP_HOSTNAME, FTP_USERNAME,FTP_PASSWORD, )
+    ftp_connection.encoding="utf-8"
+    return ftp_connection
+
+    
     
 def decrypt_file(file):
     logging.info("Decrypting file: " +file)
