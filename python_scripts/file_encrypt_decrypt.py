@@ -2,9 +2,9 @@
 import logging
 import os 
 from pathlib import Path
+import ftplib
 from dotenv import load_dotenv
 import gnupg
-import ftplib
 import mysql.connector
 
 logging.basicConfig(level=logging.INFO)
@@ -22,8 +22,6 @@ DECRYPTED_FILE_PATH=os.getenv("DECRYPTED_FILE_PATH")
 FTP_HOSTNAME=os.getenv("FTP_HOSTNAME")
 FTP_USERNAME=os.getenv("FTP_USERNAME")
 FTP_PASSWORD=os.getenv("FTP_PASSWORD")
-
-
 
 gpg=gnupg.GPG(gpgbinary=GPG_BINARY_PATH) #initializing gnuPG object
 logging.info("GNU PG object initialized successfully")
@@ -44,26 +42,26 @@ def main_function(file_path):
                 logging.info("Encrypted File Uploaded to FTP Server Sucessfully")
                 logging.info("Downloading the Encrypted File from FTP Server")
                 ftp_file_download_status=download_from_ftp_server(ENCRYPTED_FILE_PATH)
-                if (ftp_file_download_status is True):
+                if(ftp_file_download_status is True):
                     logging.info("Encrypted File Downloaded from FTP Server Sucessfully")
+                    logging.info("Decrypting the File.")
+                    decryption_status=decrypt_file(ENCRYPTED_FILE_PATH)
+                    if decryption_status is True:
+                        logging.info("File Decrypted Successfully")
+                        logging.info("Uploading Decrypted File to the Database.")
+                        upload_to_db_status=upload_file_to_db()
+                        if upload_to_db_status is True:
+                            logging.info("File Successfully Uploaded to Database.")
+                        else:
+                            logging.error("File Could Not be Uploaded to Database.")
+                    else:
+                        logging.error("File could not be Decrypted.")
                 else:
-                    logging.error("Encrypted File Could Not be Downloaded from FTP Server")                    
+                    logging.error("File could not be Encrypted.")
             else:
-                logging.error("Encrypted File Could Not be Uploaded to FTP Server")
-            #logging.info("Decrypting the File.")
-            #decryption_status=decrypt_file(ENCRYPTED_FILE_PATH)
-            #if decryption_status is True:
-                #logging.info("File Decrypted Successfully")
-                #logging.info("Uploading Decrypted File to the Database.")
-                #upload_to_db_status=upload_file_to_db()
-                #if upload_to_db_status is True:
-                    #logging.info("File Successfully Uploaded to Database.")
-                #else:
-                    #logging.error("File Could Not be Uploaded to Database.")
-            #else:
-                #logging.error("File could not be Decrypted.")
+                logging.error("Encrypted File Could Not be Downloaded from FTP Server")                    
         else:
-            logging.error("File could not be Encrypted.")
+            logging.error("Encrypted File Could Not be Uploaded to FTP Server")
     else:
         logging.error("There was an error generating the key pair for PGP encryption and decryption.")
     
@@ -143,8 +141,6 @@ def create_ftp_connection():
     ftp_connection.encoding="utf-8"
     return ftp_connection
 
-    
-    
 def decrypt_file(file):
     logging.info("Decrypting file: " +file)
     logging.info("Absolute Path of the file: "+ os.path.abspath(file))
@@ -185,7 +181,6 @@ def upload_file_to_db():
 def create_db_connection():
     connection=mysql.connector.connect(host="localhost", user="root",password="password",database="decrypted_files")
     return connection
-    
         
 if __name__=="__main__":
     main_function("E:\BMO-SE-Work\python_scripts\original_file.txt")
