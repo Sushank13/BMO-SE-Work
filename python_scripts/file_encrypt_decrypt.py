@@ -22,6 +22,10 @@ DECRYPTED_FILE_PATH=os.getenv("DECRYPTED_FILE_PATH")
 FTP_HOSTNAME=os.getenv("FTP_HOSTNAME")
 FTP_USERNAME=os.getenv("FTP_USERNAME")
 FTP_PASSWORD=os.getenv("FTP_PASSWORD")
+DB_HOSTNAME=os.getenv("DB_HOSTNAME")
+DB_USERNAME=os.getenv("DB_USERNAME")
+DB_PASSWORD=os.getenv("DB_PASSWORD")
+DB_DATABASE=os.getenv("DB_DATABASE")
 
 gpg=gnupg.GPG(gpgbinary=GPG_BINARY_PATH) #initializing gnuPG object
 logging.info("GNU PG object initialized successfully")
@@ -179,7 +183,7 @@ def upload_file_to_db():
        connection.close()
 
 def create_db_connection():
-    connection=mysql.connector.connect(host="localhost", user="root",password="password",database="decrypted_files")
+    connection=mysql.connector.connect(host=DB_HOSTNAME, user=DB_USERNAME,password=DB_PASSWORD,database=DB_DATABASE)
     return connection
         
 if __name__=="__main__":
